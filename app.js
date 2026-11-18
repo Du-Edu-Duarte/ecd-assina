@@ -874,6 +874,7 @@ $('#resetDemo').onclick = async () => { if (!(await confirmBox('Restaurar exempl
 window.addEventListener('hashchange', route);
 (async () => {
   let seeded = false; try { seeded = localStorage.getItem('ecd-assina-seeded') === '2'; } catch {}
-  if (!seeded || !(await DB.all()).length) { busy('Preparando os exemplos…'); await DB.clear(); await seed(); }
+  if (!seeded) { busy('Preparando os exemplos…'); await seed(); }
+  else if (!(await DB.all()).length) { busy('Preparando os exemplos…'); await seed(); }
   route();
 })();
