@@ -3,6 +3,8 @@
 import * as pdfjs from './vendor/pdf.min.mjs';
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('./vendor/pdf.worker.min.mjs', import.meta.url).href;
 const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
+import { configureAuth, guard, authRoute, me, getConfig } from './ecd-auth.js';
+configureAuth({ name: 'ECD Assina', tagline: 'Documentos assinados pelo celular, sem papel.', bullets: ['Envie Word ou PDF', 'Marque onde cada pessoa assina', 'Acompanhe tudo no painel'], home: '#/' });
 
 /* ---------------- utilidades ---------------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -851,180 +853,10 @@ async function seed() {
   localStorage.setItem('ecd-assina-seeded', '2');
 }
 
-/* ---------------- contas: cadastro, login por código e configurações ---------------- */
-const LS = {
-  get(k, d) { try { const v = localStorage.getItem('ecd-assina-' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem('ecd-assina-' + k, JSON.stringify(v)); } catch {} },
-  del(k) { try { localStorage.removeItem('ecd-assina-' + k); } catch {} },
-};
-const DEMO_EMAIL = 'demo@ecdtecnologia.com.br';
-const defaultConfig = () => ({
-  empresa: 'Construtora Exemplo Ltda', dominio: '',
-  setores: ['Administrativo', 'Almoxarifado', 'Obras', 'RH', 'Segurança do Trabalho'],
-  extras: [{ id: 'matricula', label: 'Matrícula', type: 'text', required: false, options: [] }],
-});
-const getConfig = () => LS.get('config', null) || defaultConfig();
-const getUsers = () => { const u = LS.get('users', null); if (u) return u; const d = [{ id: 'demo', nome: 'Usuário Demonstração', email: DEMO_EMAIL, setor: 'Segurança do Trabalho', extras: { matricula: '0001' }, role: 'admin', createdAt: Date.now(), verifiedAt: Date.now() }]; LS.set('users', d); return d; };
-const me = () => { const s = LS.get('session', null); if (!s || Date.now() - s.at > 7 * 864e5) return null; return getUsers().find(u => u.id === s.userId) || null; };
-const normEmail = e => String(e || '').trim().toLowerCase();
-const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
-function newCode(email, purpose, data) {
-  const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1e6).padStart(6, '0');
-  LS.set('pending', { email, purpose, data, code, exp: Date.now() + 10 * 6e4, tries: 0, sentAt: Date.now() }); return code;
-}
-function login(u) { LS.set('session', { userId: u.id, at: Date.now() }); LS.del('pending'); paintUser(); }
-function paintUser() {
-  const u = me(); const nav = $('.top nav');
-  $('#userBox')?.remove();
-  nav.style.display = u ? '' : 'none';
-  if (!u) return;
-  const box = document.createElement('div'); box.id = 'userBox'; box.className = 'userbox';
-  box.innerHTML = `<button class="uchip" id="uBtn"><span class="av" style="background:#c8952e;border-color:#2a2213">${initials(u.nome)}</span><span class="un">${esc(u.nome.split(' ')[0])}</span></button>
-    <div class="umenu" hidden><div class="uhead"><b>${esc(u.nome)}</b><span>${esc(u.email)}</span><span>${esc(u.setor)}${u.role === 'admin' ? ' · Administrador' : ''}</span></div>${u.role === 'admin' ? '<a href="#/config">⚙️ Configurações da empresa</a>' : ''}<button id="logout">Sair</button></div>`;
-  nav.appendChild(box);
-  const m = $('.umenu', box); $('#uBtn').onclick = e => { e.stopPropagation(); m.hidden = !m.hidden; };
-  document.addEventListener('click', () => m.hidden = true, { once: true });
-  $('#logout').onclick = () => { LS.del('session'); paintUser(); location.hash = '#/entrar'; };
-}
-const authShell = (inner) => `<div class="auth"><div class="auth-side"><img src="logo.jpg" alt=""><h2>Documentos assinados pelo celular, sem papel.</h2><ul><li>Envie Word ou PDF</li><li>Marque onde cada pessoa assina</li><li>Acompanhe tudo no painel</li></ul><small>${esc(getConfig().empresa)} · ECD Assina</small></div><div class="auth-main card">${inner}</div></div>`;
-
-function Entrar(msg = '') {
-  const cfg = getConfig();
-  view().innerHTML = authShell(`
-    <div class="eyebrow">Entrar</div><h1>Acesse sua conta</h1><p class="mut" style="margin:6px 0 22px">Digite seu e-mail. Vamos enviar um código de 6 números para confirmar que é você.</p>
-    ${msg ? `<div class="tip" style="margin-bottom:14px">${msg}</div>` : ''}
-    <form id="fl" class="grid"><label class="f">E-mail<input name="email" type="email" autocomplete="email" placeholder="voce@empresa.com.br" required></label>
-      <button class="btn primary">Enviar código</button></form>
-    <p class="sm" style="margin:18px 0 0">Ainda não tem conta? <a href="#/cadastro"><b>Cadastre-se</b></a></p>
-    <div class="or"><span>ou</span></div>
-    <button class="btn" id="demo" style="width:100%">Entrar na demonstração (sem cadastro)</button>`);
-  $('#fl').onsubmit = e => {
-    e.preventDefault(); const email = normEmail(e.target.email.value);
-    const u = getUsers().find(x => x.email === email);
-    if (!u) return Entrar(`O e-mail <b>${esc(email)}</b> ainda não tem cadastro. <a href="#/cadastro?email=${encodeURIComponent(email)}"><b>Criar conta</b></a>`);
-    newCode(email, 'login'); location.hash = '#/codigo';
-  };
-  $('#demo').onclick = () => { login(getUsers().find(u => u.email === DEMO_EMAIL) || getUsers()[0]); location.hash = '#/'; };
-}
-function extraInput(f, v = '') {
-  const req = f.required ? 'required' : '';
-  if (f.type === 'select') return `<label class="f">${esc(f.label)}${f.required ? ' *' : ''}<select name="x_${f.id}" ${req}><option value="">Selecione</option>${(f.options || []).map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`;
-  const t = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'phone' ? 'tel' : 'text';
-  return `<label class="f">${esc(f.label)}${f.required ? ' *' : ''}<input name="x_${f.id}" type="${t}" value="${esc(v)}" ${req} ${f.type === 'cpf' ? 'inputmode="numeric" placeholder="000.000.000-00"' : ''}></label>`;
-}
-function Cadastro() {
-  const cfg = getConfig(); const pre = new URLSearchParams(location.hash.split('?')[1] || '').get('email') || '';
-  view().innerHTML = authShell(`
-    <div class="eyebrow">Cadastro</div><h1>Crie sua conta</h1><p class="mut" style="margin:6px 0 22px">Preencha seus dados. Depois você confirma o e-mail com um código.</p>
-    <form id="fc" class="grid">
-      <label class="f">Nome completo *<input name="nome" autocomplete="name" required></label>
-      <div class="form2"><label class="f">Setor *<select name="setor" required><option value="">Selecione</option>${cfg.setores.map(s => `<option>${esc(s)}</option>`).join('')}</select></label>
-      <label class="f">E-mail *<input name="email" type="email" autocomplete="email" value="${esc(pre)}" placeholder="${cfg.dominio ? 'voce@' + esc(cfg.dominio) : 'voce@empresa.com.br'}" required></label></div>
-      ${cfg.extras.length ? `<div class="form2">${cfg.extras.map(f => extraInput(f)).join('')}</div>` : ''}
-      <label class="row sm" style="gap:8px;align-items:flex-start"><input type="checkbox" required style="margin-top:3px"> Concordo com o uso dos meus dados para acesso ao sistema e registro das assinaturas (LGPD).</label>
-      <div id="err" class="sm" style="color:var(--bad)"></div>
-      <button class="btn primary">Criar conta e receber código</button></form>
-    <p class="sm" style="margin:18px 0 0">Já tem conta? <a href="#/entrar"><b>Entrar</b></a></p>`);
-  $('#fc').onsubmit = e => {
-    e.preventDefault(); const f = e.target; const email = normEmail(f.email.value);
-    const err = t => $('#err').textContent = t;
-    if (!validEmail(email)) return err('Confira o e-mail.');
-    if (cfg.dominio && !email.endsWith('@' + cfg.dominio.replace(/^@/, '').toLowerCase())) return err(`Use seu e-mail da empresa (@${cfg.dominio.replace(/^@/, '')}).`);
-    if (getUsers().some(u => u.email === email)) return err('Este e-mail já tem cadastro. Use "Entrar".');
-    const extras = {}; for (const x of cfg.extras) { const v = (f['x_' + x.id]?.value || '').trim(); if (x.type === 'cpf' && v && v.replace(/\D/g, '').length !== 11) return err(`${x.label}: CPF incompleto.`); extras[x.id] = v; }
-    newCode(email, 'signup', { nome: f.nome.value.trim(), setor: f.setor.value, email, extras });
-    location.hash = '#/codigo';
-  };
-  $$('#fc input[inputmode=numeric]').forEach(i => i.oninput = () => { const d = i.value.replace(/\D/g, '').slice(0, 11); i.value = d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2'); });
-}
-function Codigo() {
-  const p = LS.get('pending', null); if (!p) { location.hash = '#/entrar'; return; }
-  const nome = p.purpose === 'signup' ? p.data.nome.split(' ')[0] : (getUsers().find(u => u.email === p.email)?.nome.split(' ')[0] || '');
-  view().innerHTML = authShell(`
-    <div class="eyebrow">Confirmação</div><h1>Digite o código</h1><p class="mut" style="margin:6px 0 22px">Enviamos um código de 6 números para <b style="color:var(--ink)">${esc(p.email)}</b>. Ele vale por 10 minutos.</p>
-    <form id="fk"><div class="otp">${Array.from({ length: 6 }, (_, i) => `<input inputmode="numeric" maxlength="1" autocomplete="${i ? 'off' : 'one-time-code'}" aria-label="Dígito ${i + 1}">`).join('')}</div>
-      <div id="err" class="sm" style="color:var(--bad);min-height:20px;margin:10px 0"></div>
-      <button class="btn primary" style="width:100%" id="ok" disabled>Confirmar</button></form>
-    <div class="row between sm" style="margin-top:14px"><a href="#/entrar">← Usar outro e-mail</a><button class="link" id="resend"></button></div>
-    <div class="mail"><div class="mail-tag">📧 Caixa de entrada (demonstração)</div>
-      <div class="mail-h"><b>ECD Assina</b> &lt;nao-responda@ecdassina.com.br&gt;<br><span>Para: ${esc(p.email)}</span></div>
-      <div class="mail-s">Seu código de acesso: ${p.code}</div>
-      <div class="mail-b">Olá${nome ? ', ' + esc(nome) : ''}! Use o código abaixo para ${p.purpose === 'signup' ? 'confirmar seu cadastro' : 'entrar'} no ECD Assina da ${esc(getConfig().empresa)}.<div class="mail-code">${p.code.split('').join(' ')}</div>Se não foi você, ignore este e-mail.</div>
-      <div class="mail-note">Na versão para empresas este e-mail chega de verdade na caixa de entrada. Aqui ele aparece na tela para você testar.</div></div>`);
-  const ins = $$('.otp input'); const val = () => ins.map(i => i.value).join('');
-  ins.forEach((i, k) => {
-    i.oninput = () => { i.value = i.value.replace(/\D/g, '').slice(-1); if (i.value && ins[k + 1]) ins[k + 1].focus(); $('#ok').disabled = val().length !== 6; if (val().length === 6) $('#fk').requestSubmit(); };
-    i.onkeydown = e => { if (e.key === 'Backspace' && !i.value && ins[k - 1]) ins[k - 1].focus(); };
-    i.onpaste = e => { const d = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6); if (!d) return; e.preventDefault(); d.split('').forEach((c, j) => ins[j] && (ins[j].value = c)); $('#ok').disabled = d.length !== 6; if (d.length === 6) $('#fk').requestSubmit(); };
-  });
-  setTimeout(() => ins[0].focus(), 50);
-  $('#fk').onsubmit = e => {
-    e.preventDefault(); const q = LS.get('pending', null); if (!q) return location.hash = '#/entrar';
-    const err = t => { $('#err').textContent = t; ins.forEach(i => i.value = ''); ins[0].focus(); $('#ok').disabled = true; };
-    if (Date.now() > q.exp) return err('O código expirou. Peça um novo.');
-    if (q.tries >= 5) return err('Muitas tentativas. Peça um novo código.');
-    if (val() !== q.code) { q.tries++; LS.set('pending', q); return err(`Código incorreto. Restam ${5 - q.tries} tentativas.`); }
-    let u;
-    if (q.purpose === 'signup') { const users = getUsers(); u = { id: uid(8), ...q.data, role: 'user', createdAt: Date.now(), verifiedAt: Date.now() }; users.push(u); LS.set('users', users); }
-    else u = getUsers().find(x => x.email === q.email);
-    login(u); location.hash = '#/'; setTimeout(() => toast(q.purpose === 'signup' ? `Conta criada! Bem-vindo(a), ${u.nome.split(' ')[0]}.` : `Olá, ${u.nome.split(' ')[0]}!`), 300);
-  };
-  const rb = $('#resend'); const tick = () => { const s = Math.ceil((p.sentAt + 30e3 - Date.now()) / 1000); if (!document.body.contains(rb)) return; if (s > 0) { rb.textContent = `Reenviar em ${s}s`; rb.disabled = true; setTimeout(tick, 1000); } else { rb.textContent = 'Reenviar código'; rb.disabled = false; } }; tick();
-  rb.onclick = () => { newCode(p.email, p.purpose, p.data); Codigo(); toast('Novo código enviado'); };
-}
-function Config() {
-  const u = me(); if (u.role !== 'admin') { view().innerHTML = '<div class="card pad"><h2>Só administradores</h2><a class="btn" href="#/">Voltar</a></div>'; return; }
-  const cfg = getConfig(); const users = getUsers();
-  const TYPES = { text: 'Texto', number: 'Número', date: 'Data', phone: 'Telefone', cpf: 'CPF', select: 'Lista de opções' };
-  const draw = () => {
-    view().innerHTML = `
-    <div class="head"><div><div class="eyebrow">Configurações</div><h1>Empresa e cadastro</h1><p class="mut" style="margin:6px 0 0">Defina o que cada pessoa preenche ao criar a conta.</p></div><a class="btn" href="#/">← Painel</a></div>
-    <div class="detail">
-      <div class="grid">
-        <div class="card pad grid"><h2>Empresa</h2>
-          <div class="form2"><label class="f">Nome da empresa<input id="cEmp" value="${esc(cfg.empresa)}"></label>
-          <label class="f">Aceitar só e-mails do domínio (opcional)<input id="cDom" value="${esc(cfg.dominio)}" placeholder="empresa.com.br"></label></div></div>
-        <div class="card pad grid"><div class="row between"><h2>Setores</h2></div>
-          <div class="row" id="sets">${cfg.setores.map((s, i) => `<span class="tagx">${esc(s)}<button data-rs="${i}" title="Remover">✕</button></span>`).join('')}</div>
-          <form id="fs" class="row"><input class="search" name="s" placeholder="Novo setor (ex.: Manutenção)" required><button class="btn sm">+ Adicionar</button></form></div>
-        <div class="card pad grid"><div><h2>Campos extras do cadastro</h2><p class="mut sm" style="margin:4px 0 0">Nome, setor e e-mail já são pedidos sempre. Aqui você inclui o que mais a empresa precisa.</p></div>
-          <table class="items"><thead><tr><th>Campo</th><th>Tipo</th><th>Opções (para lista)</th><th>Obrigatório</th><th></th></tr></thead><tbody>
-          ${cfg.extras.map((f, i) => `<tr data-i="${i}"><td><input data-k="label" value="${esc(f.label)}"></td><td><select data-k="type" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:7px">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></td>
-            <td><input data-k="options" value="${esc((f.options || []).join(', '))}" placeholder="Separe por vírgula" ${f.type === 'select' ? '' : 'disabled'}></td><td style="text-align:center"><input type="checkbox" data-k="required" ${f.required ? 'checked' : ''}></td><td><button class="link" data-rf="${i}">✕</button></td></tr>`).join('')}
-          </tbody></table>
-          <div class="row"><button class="btn sm" id="addF">+ Adicionar campo</button>${['CPF', 'Telefone', 'Cargo', 'Unidade / obra', 'Data de admissão'].filter(n => !cfg.extras.some(f => f.label === n)).map(n => `<button class="chipbtn" data-q="${n}">+ ${n}</button>`).join('')}</div></div>
-        <div class="card" style="overflow:hidden"><div class="pad" style="padding-bottom:6px"><h2>Pessoas cadastradas (${users.length})</h2></div>
-          <table class="list"><thead><tr><th>Nome</th><th>Setor</th><th class="hide-m">E-mail</th><th>Perfil</th></tr></thead><tbody>
-          ${users.map(x => `<tr style="cursor:default"><td class="doc-t">${esc(x.nome)}<small>${cfg.extras.map(f => x.extras?.[f.id] ? `${esc(f.label)}: ${esc(x.extras[f.id])}` : '').filter(Boolean).join(' · ') || 'Desde ' + fmtD(x.createdAt)}</small></td><td>${esc(x.setor)}</td><td class="hide-m sm">${esc(x.email)}</td><td><select data-role="${x.id}" ${x.id === u.id ? 'disabled' : ''} style="border:1px solid var(--line);border-radius:8px;padding:5px"><option value="user" ${x.role !== 'admin' ? 'selected' : ''}>Usuário</option><option value="admin" ${x.role === 'admin' ? 'selected' : ''}>Administrador</option></select></td></tr>`).join('')}
-          </tbody></table></div>
-      </div>
-      <aside class="grid" style="position:sticky;top:84px"><div class="card pad"><div class="eyebrow">Prévia</div><h3 style="margin-bottom:12px">Tela de cadastro</h3>
-        <div class="grid" style="pointer-events:none;opacity:.95"><label class="f">Nome completo *<input></label><label class="f">Setor *<select><option>${esc(cfg.setores[0] || '')}</option></select></label><label class="f">E-mail *<input placeholder="${cfg.dominio ? 'voce@' + esc(cfg.dominio) : 'voce@empresa.com.br'}"></label>${cfg.extras.map(f => extraInput(f)).join('')}</div>
-        <a class="btn sm" href="#/cadastro" id="tryS" style="margin-top:14px">Testar o cadastro →</a></div></aside>
-    </div>`;
-    const save = (redraw = false) => { LS.set('config', cfg); if (redraw) draw(); };
-    $('#cEmp').oninput = e => { cfg.empresa = e.target.value; save(); };
-    $('#cDom').onchange = e => { cfg.dominio = e.target.value.trim().replace(/^@/, '').toLowerCase(); save(true); };
-    $('#fs').onsubmit = e => { e.preventDefault(); const v = e.target.s.value.trim(); if (v && !cfg.setores.includes(v)) { cfg.setores.push(v); cfg.setores.sort((a, b) => a.localeCompare(b)); } save(true); };
-    $$('[data-rs]').forEach(b => b.onclick = () => { cfg.setores.splice(+b.dataset.rs, 1); save(true); });
-    $$('tr[data-i]').forEach(tr => { const f = cfg.extras[+tr.dataset.i]; $$('[data-k]', tr).forEach(el => el.onchange = () => { const k = el.dataset.k; f[k] = k === 'required' ? el.checked : k === 'options' ? el.value.split(',').map(s => s.trim()).filter(Boolean) : el.value; save(k === 'type' || k === 'required' || k === 'label' || k === 'options'); }); });
-    $$('[data-rf]').forEach(b => b.onclick = () => { cfg.extras.splice(+b.dataset.rf, 1); save(true); });
-    const add = (label, type = 'text') => { cfg.extras.push({ id: slug(label) + '_' + uid(3), label, type, required: false, options: type === 'select' ? ['Opção 1', 'Opção 2'] : [] }); save(true); };
-    $('#addF').onclick = async () => { const v = await askText('Novo campo do cadastro', 'Nome do campo', ''); if (v) add(v.v); };
-    $$('[data-q]').forEach(b => b.onclick = () => { const n = b.dataset.q; add(n, n === 'CPF' ? 'cpf' : n === 'Telefone' ? 'phone' : n === 'Data de admissão' ? 'date' : 'text'); });
-    $$('[data-role]').forEach(s => s.onchange = () => { const x = users.find(y => y.id === s.dataset.role); x.role = s.value; LS.set('users', users); toast('Perfil atualizado'); });
-    $('#tryS').onclick = () => { LS.del('session'); paintUser(); };
-  };
-  draw();
-}
-
 /* ---------------- roteador ---------------- */
 async function route() {
   const h = location.hash.replace(/^#\/?/, '').split('?')[0].split('/'); $('.top nav').style.visibility = '';
-  const pub = ['entrar', 'cadastro', 'codigo', 'assinar'];
-  if (!me() && !pub.includes(h[0])) { location.hash = '#/entrar'; return; }
-  if (me() && ['entrar', 'cadastro', 'codigo'].includes(h[0])) { location.hash = '#/'; return; }
-  paintUser(); if (h[0] === 'assinar' && !me()) $('.top nav').style.display = 'none';
+  if (!guard(h[0], ['assinar'])) return; if (h[0] === 'assinar' && !me()) $('.top nav').style.display = 'none';
   $$('.top nav a').forEach(a => a.classList.toggle('on', a.dataset.nav === (h[0] || 'painel')));
   $('#modal').hidden = true; window.scrollTo(0, 0);
   try {
@@ -1034,10 +866,7 @@ async function route() {
     else if (h[0] === 'editar') await Editor(h[1]);
     else if (h[0] === 'doc') await Detalhe(h[1]);
     else if (h[0] === 'assinar') await Assinar(h[1], h[2], h[3]);
-    else if (h[0] === 'entrar') Entrar();
-    else if (h[0] === 'cadastro') Cadastro();
-    else if (h[0] === 'codigo') Codigo();
-    else if (h[0] === 'config') Config();
+    else if (authRoute(h[0])) {}
     else NotFound();
   } catch (e) { console.error(e); view().innerHTML = `<div class="card pad"><h2>Algo deu errado</h2><p class="mut">${esc(e.message || e)}</p><a class="btn" href="#/">Voltar</a></div>`; }
 }

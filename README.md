@@ -16,6 +16,7 @@ Assinatura digital de documentos pelo celular. Você envia um **Word ou PDF**, m
 - **Assinatura com o dedo.** Tela de assinatura em tela cheia no celular. Nome e data são preenchidos sozinhos.
 - **PDF final com verificação.** Inclui as assinaturas no lugar certo e uma página final com código de verificação, data, hora e aparelho de cada assinatura, a impressão digital SHA-256 do original e o histórico.
 - **Modelo de termo de ferramentas e EPIs.** Preencha colaborador, gestor e itens, e o termo é gerado já com os campos de assinatura. Depois da assinatura, registre a **devolução** de cada item (data e estado).
+- **Acesso só para clientes.** O cadastro exige um **código de convite** gerado pelo administrador. O convite pode valer para um e-mail específico, ter prazo e número de usos, e ser enviado pelo WhatsApp. Também dá para bloquear o acesso de uma pessoa.
 - **Cadastro e login por código.** A pessoa se cadastra com nome, setor e e-mail e entra com um código de 6 números enviado por e-mail, sem senha para decorar. Na demonstração, o e-mail aparece na própria tela.
 - **Cadastro configurável por empresa.** O administrador inclui campos extras, como CPF, matrícula, cargo, telefone, data ou lista de opções, e define quais são obrigatórios. Também cadastra os setores, pode aceitar só e-mails do domínio da empresa e escolhe quem é administrador.
 - **Painel.** Mostra documentos, pendentes, concluídos e ferramentas em uso, com filtros e busca.
