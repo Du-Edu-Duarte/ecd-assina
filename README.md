@@ -16,6 +16,8 @@ Assinatura digital de documentos pelo celular. Você envia um **Word ou PDF**, m
 - **Assinatura com o dedo.** Tela de assinatura em tela cheia no celular. Nome e data são preenchidos sozinhos.
 - **PDF final com verificação.** Inclui as assinaturas no lugar certo e uma página final com código de verificação, data, hora e aparelho de cada assinatura, a impressão digital SHA-256 do original e o histórico.
 - **Modelo de termo de ferramentas e EPIs.** Preencha colaborador, gestor e itens, e o termo é gerado já com os campos de assinatura. Depois da assinatura, registre a **devolução** de cada item (data e estado).
+- **Cadastro e login por código.** A pessoa se cadastra com nome, setor e e-mail e entra com um código de 6 números enviado por e-mail, sem senha para decorar. Na demonstração, o e-mail aparece na própria tela.
+- **Cadastro configurável por empresa.** O administrador inclui campos extras, como CPF, matrícula, cargo, telefone, data ou lista de opções, e define quais são obrigatórios. Também cadastra os setores, pode aceitar só e-mails do domínio da empresa e escolhe quem é administrador.
 - **Painel.** Mostra documentos, pendentes, concluídos e ferramentas em uso, com filtros e busca.
 
 ## Tecnologias
@@ -46,7 +48,9 @@ python3 -m http.server 8000
 
 ## Versão para empresas
 
-Na demonstração, o link de assinatura abre no mesmo navegador. Na versão para empresas, os documentos ficam num servidor com login. Assim o link abre em qualquer celular e o gestor é avisado quando alguém assina.
+Na demonstração, tudo fica no navegador: o código de acesso aparece na tela e o link de assinatura abre no mesmo aparelho. Na versão para empresas, contas e documentos ficam num servidor (por exemplo, Supabase). O código chega de verdade no e-mail, o link abre em qualquer celular e o gestor é avisado quando alguém assina.
+
+Para testar sem cadastro, use **"Entrar na demonstração"**: você entra como administrador e pode abrir as **Configurações da empresa**.
 
 ## Autor
 

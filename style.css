@@ -183,3 +183,36 @@ label.f input:focus,label.f select:focus,label.f textarea:focus,.search:focus{ou
   .signbar .row{justify-content:space-between}
   .top nav a[data-nav=painel]{display:none}
 }
+
+/* contas */
+.auth{display:grid;grid-template-columns:1fr 1.1fr;gap:0;max-width:1000px;margin:10px auto;border-radius:20px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line)}
+.auth-side{background:radial-gradient(500px 400px at 80% 0%,#3a2c12,#15110a 70%);color:#f4efe4;padding:44px;display:flex;flex-direction:column;gap:18px}
+.auth-side img{width:64px;height:64px;border-radius:50%;box-shadow:0 0 60px rgba(226,180,84,.4)}
+.auth-side h2{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+.auth-side ul{margin:0;padding:0;list-style:none;display:grid;gap:10px;color:#d9d0bd}
+.auth-side li::before{content:"✓";color:var(--gold);font-weight:800;margin-right:10px}
+.auth-side small{margin-top:auto;color:#9d927c}
+.auth-main{border:0;border-radius:0;box-shadow:none;padding:44px}
+.or{display:flex;align-items:center;gap:12px;color:var(--mut);font-size:13px;margin:18px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.otp{display:flex;gap:10px;justify-content:space-between}
+.otp input{width:100%;max-width:58px;height:64px;text-align:center;font:800 28px Inter,sans-serif;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+.otp input:focus{outline:2px solid var(--gold);border-color:var(--gold)}
+.mail{margin-top:26px;border:1px dashed #d8cdb4;border-radius:14px;padding:16px;background:#fffdf8;font-size:13.5px}
+.mail-tag{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold2);margin-bottom:10px}
+.mail-h{color:var(--ink2);border-bottom:1px solid var(--line);padding-bottom:8px}.mail-h span{color:var(--mut)}
+.mail-s{font-weight:700;margin:10px 0 6px}
+.mail-b{color:var(--ink2)}
+.mail-code{font:800 30px 'DejaVu Sans Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--ink);background:var(--goldbg);border-radius:10px;text-align:center;padding:12px;margin:10px 0}
+.mail-note{margin-top:10px;color:var(--mut);font-size:12px}
+.userbox{position:relative}
+.uchip{display:flex;align-items:center;gap:8px;background:#2a2213;border:1px solid #4a3c1f;border-radius:99px;padding:3px 12px 3px 3px;color:#fff;cursor:pointer;font-weight:600}
+.uchip .av{width:30px;height:30px}
+.umenu{position:absolute;right:0;top:calc(100% + 8px);background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.18);min-width:260px;padding:8px;z-index:30;display:flex;flex-direction:column}
+.umenu .uhead{padding:10px 12px;border-bottom:1px solid var(--line);margin-bottom:6px;display:flex;flex-direction:column;font-size:13px;color:var(--mut)}
+.umenu .uhead b{color:var(--ink);font-size:14.5px}
+.umenu a,.umenu button{display:block;text-align:left;padding:10px 12px;border-radius:9px;text-decoration:none;background:none;border:0;cursor:pointer;font-weight:600}
+.umenu a:hover,.umenu button:hover{background:var(--bg)}
+.tagx{display:inline-flex;align-items:center;gap:8px;background:var(--goldbg);border:1px solid #efdfb8;border-radius:99px;padding:6px 8px 6px 14px;font-size:13.5px;font-weight:600}
+.tagx button{border:0;background:#fff;border-radius:50%;width:22px;height:22px;cursor:pointer;color:var(--mut)}
+@media (max-width:900px){.auth{grid-template-columns:1fr}.auth-side{padding:20px 22px;flex-direction:row;align-items:center;gap:14px}.auth-side img{width:44px;height:44px}.auth-side h2{font-size:18px}.auth-side ul,.auth-side small{display:none}.auth-main{padding:26px 20px}.uchip .un{display:none}}
