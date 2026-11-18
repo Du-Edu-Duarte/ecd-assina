@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECD Assina · Assinatura digital de documentos</title>
+<meta name="description" content="Envie um Word ou PDF, marque onde cada pessoa assina e colete as assinaturas pelo celular. Demonstração da ECD Tecnologia.">
+<link rel="icon" href="logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/">
+    <img src="logo.jpg" alt="">
+    <span><b>ECD Assina</b><small>por ECD Tecnologia</small></span>
+  </a>
+  <nav>
+    <a href="#/" data-nav="painel">Painel</a>
+    <a href="#/novo" data-nav="novo" class="btn sm primary">+ Novo documento</a>
+  </nav>
+</header>
+<div class="demo-bar">Versão de demonstração: os dados ficam salvos só neste navegador e todos os nomes são fictícios. <button id="resetDemo" class="link">Restaurar exemplos</button></div>
+<main id="view"></main>
+<footer class="foot">ECD Tecnologia · Sistemas sob medida · <a href="https://www.instagram.com/ecdtecnologia/" target="_blank" rel="noopener">@ecdtecnologia</a></footer>
+
+<div id="modal" class="modal" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
